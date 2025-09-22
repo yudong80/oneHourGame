@@ -1,0 +1,19 @@
+# Compiled executables from game directories
+1/game
+2/game_of_life
+3/othello
+
+# Object files
+*.o
+*.obj
+
+# Temporary files
+*.tmp
+*.temp
+
+# VS Code settings
+.vscode/
+
+# Backup files
+*~
+*.bak

@@ -4,7 +4,8 @@
 #include <stdlib.h> // [1-2]표준 라이브러리 헤더를 인클루드한다
 #include <string.h>	// [1-3]문자열 조작 헤더를 인클루드한다
 #include <time.h>   // [1-4]시간 관리 헤더를 인클루한다
-#include <conio.h>  // [1-5]콘솔 입출력 헤더를 인클루드한다
+#include <termios.h> // [1-5]터미널 I/O 헤더를 인클루드한다
+#include <unistd.h>  // [1-6]유닉스 표준 헤더를 인클루드한다
 
 // [2]상수를 정의하는 곳
 
@@ -109,6 +110,19 @@ char commandNames[COMMAND_MAX][4 * 3 + 1] = {
 
 // [6]함수를 선언하는 곳
 
+// [6-0]리눅스용 getch() 함수를 구현한다
+int getch(void) {
+    struct termios oldattr, newattr;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldattr);
+    newattr = oldattr;
+    newattr.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
+    return ch;
+}
+
 // [6-1]게임을 초기화하는 함수를 선언한다
 void Init()
 {
@@ -120,7 +134,7 @@ void Init()
 void DrawBattleScreen()
 {
     // [6-2-1]화면을 클리어한다
-    system("cls");
+    system("clear");
 
     // [6-2-2]플레이어의 이름을 표시한다
     printf("%s\n", characters[CHARACTER_PLAYER].name);
@@ -180,7 +194,7 @@ void SelectCommand()
         }
 
         // [6-3-10]입력된 키에 따라 분기한다
-        switch (_getch())
+        switch (getch())
         {
         case 'w':   // [6-3-11]w키를 누르면
 
@@ -225,7 +239,7 @@ void Battle(int _monster)
     printf("%s이(가) 나타났다!\n", characters[CHARACTER_MONSTER].name);
 
     // [6-4-6]키보드 입력을 기다린다
-    _getch();
+    getch();
 
     // [6-4-7]전투가 끝날 때까지 루프한다
     while (1)
@@ -248,7 +262,7 @@ void Battle(int _monster)
                 printf("%s의 공격!\n", characters[i].name);
 
                 // [6-4-14]키보드 입력을 기다린다
-                _getch();
+                getch();
 
                 // [6-4-15]적에게 주는 대미지를 계산한다
                 int damage = 1 + rand() % characters[i].attack;
@@ -272,7 +286,7 @@ void Battle(int _monster)
                     damage);
 
                 // [6-4-21]키보드 입력을 기다린다
-                _getch();
+                getch();
 
                 break;
             }
@@ -285,7 +299,7 @@ void Battle(int _monster)
                     printf("MP가 부족하다!\n");
 
                     // [6-4-25]키보드 입력을 기다린다
-                    _getch();
+                    getch();
 
                     // [6-4-26]주문을 외우는 처리를 빠져나온다
                     break;
@@ -301,7 +315,7 @@ void Battle(int _monster)
                 printf("%s은(는) 주문을 외웠다!\n", characters[i].name);
 
                 // [6-4-30]키보드 입력을 기다린다
-                _getch();
+                getch();
 
                 // [6-4-31]HP를 회복시킨다
                 characters[i].hp = characters[i].maxHp;
@@ -313,7 +327,7 @@ void Battle(int _monster)
                 printf("%s의 상처가 회복되었다!\n", characters[i].name);
 
                 // [6-4-34]키보드 입력을 기다린다
-                _getch();
+                getch();
 
                 break;
 
@@ -323,7 +337,7 @@ void Battle(int _monster)
                 printf("%s은(는) 도망쳤다!\n", characters[i].name);
 
                 // [6-4-37]키보드 입력을 기다린다
-                _getch();
+                getch();
 
                 // [6-4-38]전투 처리를 빠져나간다
                 return;
@@ -349,7 +363,7 @@ void Battle(int _monster)
                 case CHARACTER_MONSTER:
 
                     // [6-4-44]몬스터의 아스키아트를 아무것도 표시하지 않게 다시 작성한다
-                    strcpy_s(characters[characters[i].target].aa, "\n");
+                    strcpy(characters[characters[i].target].aa, "\n");
 
                     // [6-4-45]전투 장면의 화면을 다시 그리는 함수를 호출한다
                     DrawBattleScreen();
@@ -361,7 +375,7 @@ void Battle(int _monster)
                 }
 
                 // [6-4-47]키보드 입력을 기다린다
-                _getch();
+                getch();
 
                 // [6-4-48]전투 장면의 함수를 빠져나간다
                 return;
@@ -373,7 +387,7 @@ void Battle(int _monster)
 // [6-6]프로그램의 실행 시작점을 선언한다
 int main()
 {
-   system("chcp 65001 > nul");// [6-6-0]콘솔의 문자 세트를 UTF-8로 설정한다
+   // [6-6-0]리눅스에서는 기본적으로 UTF-8을 사용한다
     
    // [6-6-1]난수를 섞는다
     srand((unsigned int)time(NULL));

@@ -4,15 +4,15 @@
 #include <stdlib.h> // [1-2]표준 라이브러리 헤더를 인클루드한다
 #include <string.h> // [1-3]문자열 조작 헤더를 인클루드한다
 #include <time.h>   // [1-4]시간 관리 헤더를 인클루드한다
-#include <conio.h>  // [1-5]콘솔 입출력 헤더를 인클루드한다
+#include <stdbool.h> // [1-5]bool 타입을 위한 헤더를 인클루드한다
 
 // [2]상수를 정의하는 곳
 
-#define FIELD_WIDTH     (160)           // [2-1]필드의 너비를 정의한다
-#define FIELD_HEIGHT    (160)           // [2-2]필드의 높이를 정의한다
+#define FIELD_WIDTH     (40)            // [2-1]필드의 너비를 정의한다 (터미널 크기에 맞게 조정)
+#define FIELD_HEIGHT    (20)            // [2-2]필드의 높이를 정의한다 (터미널 크기에 맞게 조정)
 
-#define FPS             (10)            // [2-3]1초당 갱신 횟수를 정의한다
-#define INTERVAL        (1000/FPS)    // [2-4]갱신 간격(밀리초)을 정의한다
+#define FPS             (2)             // [2-3]1초당 갱신 횟수를 정의한다 (느리게 조정)
+#define INTERVAL        (CLOCKS_PER_SEC/FPS) // [2-4]갱신 간격(clock ticks)을 정의한다
 
 // [3]변수를 선언하는 곳
 
@@ -31,7 +31,7 @@ bool field[FIELD_HEIGHT][FIELD_WIDTH] =
 // [4-1]필드를 그리는 함수를 선언한다
 void DrawField()
 {
-    system("cls");// [4-1-1]그리기 전에 화면을 클리어한다
+    system("clear");// [4-1-1]그리기 전에 화면을 클리어한다
 
     // [4-1-2]필드의 모든 행을 반복한다
     for (int y = 0; y < FIELD_HEIGHT; y++)
@@ -39,8 +39,8 @@ void DrawField()
         // [4-1-3]필드의 모든 열을 반복한다
         for (int x = 0; x < FIELD_WIDTH; x++)
         {
-            // [4-1-4]셀이 살아 있으면「■」를, 죽어 있으면「  」를 그립니다
-            printf("%s", field[y][x] ? "■" : "  ");
+            // [4-1-4]셀이 살아 있으면「*」를, 죽어 있으면「 」를 그립니다 (리눅스 터미널 호환성)
+            printf("%s", field[y][x] ? "*" : " ");
         }
 
         printf("\n");// [4-1-5]1행 그릴 때마다 줄바꿈한다

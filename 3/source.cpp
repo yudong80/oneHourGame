@@ -3,8 +3,10 @@
 #include <stdio.h>  // [1-1]표준 입출력 헤더를 인클루드한다
 #include <stdlib.h> // [1-2]표준 라이브러리 헤더를 인클루드한다
 #include <time.h>   // [1-3]시간 관리 헤더를 인클루드한다
-#include <conio.h>  // [1-4]콘솔 입출력 헤더를 인클루드한다
-#include <vector>   // [1-5]벡터 헤더를 인클루드한다
+#include <termios.h> // [1-4]터미널 I/O 헤더를 인클루드한다
+#include <unistd.h>  // [1-5]유닉스 표준 헤더를 인클루드한다
+#include <stdbool.h> // [1-6]bool 타입을 위한 헤더를 인클루드한다
+#include <vector>   // [1-7]벡터 헤더를 인클루드한다
 
 // [2]상수를 정의하는 곳
 
@@ -54,12 +56,12 @@ typedef struct {
 
 // [5]변수를 선언하는 곳
 
-// [5-1]돌의 아스키아트를 선언한다
+// [5-1]돌의 아스키아트를 선언한다 (ASCII 문자로 터미널 호환성 향상)
 const char* diskAA[TURN_MAX] =
 {
-    "●",    // [5-1-1]TURN_BLACK    검은 돌이 놓여 있다
-    "○",    // [5-1-2]TURN_WHITE    흰 돌이 놓여 있다
-     "・"     // [5-1-3]TURN_NONE     돌이 놓여 있지 않다
+    "X",    // [5-1-1]TURN_BLACK    검은 돌이 놓여 있다
+    "O",    // [5-1-2]TURN_WHITE    흰 돌이 놓여 있다
+    ".",    // [5-1-3]TURN_NONE     돌이 놓여 있지 않다
 };
 
 // [5-2]턴의 이름을 선언한다
@@ -102,6 +104,19 @@ int mode;// [5-8]현재의 게임 모드를 선언한다
 bool isPlayer[TURN_MAX];// [5-9]각 턴이 플레이어인지 여부를 선언한다
 
 // [6]함수를 선언하는 곳
+
+// [6-0]리눅스용 getch() 함수를 구현한다
+int getch(void) {
+    struct termios oldattr, newattr;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldattr);
+    newattr = oldattr;
+    newattr.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
+    return ch;
+}
 
 // [6-1]벡터를 더하는 함수를 선언한다
 VEC2 VecAdd(VEC2 _v0, VEC2 _v1)
@@ -261,7 +276,7 @@ int GetDiskCount(int _color)
 // [6-5]화면을 그리는 함수를 선언한다
 void DrawScreen()
 {
-    system("cls");// [6-5-1]화면을 클리어한다
+    system("clear");// [6-5-1]화면을 클리어한다
 
     // [6-5-2]모든 행을 반복한다
     for (int y = 0; y < BOARD_HEIGHT; y++)
@@ -278,7 +293,7 @@ void DrawScreen()
             // [6-5-6]대상 행이 커서와 같은 행인지 여부를 판정한다
             if (y == cursorPosition.y)
             {
-                printf("←");// [6-5-7]커서를 그린다
+                printf("<");// [6-5-7]커서를 그린다
             }
         }
 
@@ -294,11 +309,11 @@ void DrawScreen()
             // [6-5-11]커서와 같은 열인지 여부를 판정한다
             if (x == cursorPosition.x)
             {
-                printf("↑");    // [6-5-12]↑화살표를 표시한다
+                printf("^");    // [6-5-12]^화살표를 표시한다
             }
             else
             {
-                printf("　");    // [6-5-13]공백을 표시한다
+                printf(" ");    // [6-5-13]공백을 표시한다
             }
         }
     }
@@ -366,7 +381,7 @@ void SelectMode()
     // [6-6-2]무한 루프한다
     while (1)
     {
-        system("cls");// [6-6-3]화면을 클리어한다
+        system("clear");// [6-6-3]화면을 클리어한다
 
         // [6-6-4]메시지를 표시한다
         printf("모드를 선택하세요\n");
@@ -377,7 +392,7 @@ void SelectMode()
         for (int i = 0; i < MODE_MAX; i++)
         {
             // [6-6-7]현재의 모드에는 커서를, 그 밖에는 공백을 그린다
-            printf("%s ", (i == mode) ? "＞":"　");
+            printf("%s ", (i == mode) ? ">":"");
 
             printf("%s\n", modeNames[i]);// [6-6-8]모드의 이름을 그린다
 
@@ -385,7 +400,7 @@ void SelectMode()
         }
 
         // [6-6-10]입력된 키로 분기한다
-        switch (_getch())
+        switch (getch())
         {
         case 'w':   // [6-6-11]w키를 누르면
             mode--; // [6-6-12]이전 모드로 바꾼다
@@ -444,11 +459,14 @@ void Init()
         }
     }
 
-    // [6-7-4]모눈판 중앙의 오른쪽 위와 왼쪽 아래에 검은 돌을 놓는다
-    board[4][3] = board[3][4] = TURN_BLACK;
-
-    // [6-7-5]모눈판 중앙의 왼쪽 위와 오른쪽 아래에 흰 돌을 놓는다
-    board[3][3] = board[4][4] = TURN_WHITE;
+    // [6-7-4]모눈판 중앙에 표준 오델로 초기 배치를 한다 (8x8 보드 중앙)
+    // 표준 오델로 초기 배치:
+    // [3][3]=흰돌, [3][4]=검은돌
+    // [4][3]=검은돌, [4][4]=흰돌
+    board[3][3] = TURN_WHITE;   // (3,3) 흰 돌
+    board[3][4] = TURN_BLACK;   // (3,4) 검은 돌
+    board[4][3] = TURN_BLACK;   // (4,3) 검은 돌
+    board[4][4] = TURN_WHITE;   // (4,4) 흰 돌
 
     turn = TURN_BLACK;// [6-7-6]검은 돌의 턴으로 초기화한다
 
@@ -466,7 +484,7 @@ VEC2 InputPosition()
         DrawScreen();// [6-8-2]화면을 그리는 함수를 호출한다
 
         // [6-8-3]입력된 키에 따라 분기한다
-        switch (_getch())
+        switch (getch())
         {
         case 'w':               // [6-8-4]w키를 누르면
             cursorPosition.y--; // [6-8-5]커서를 위쪽으로 이동한다
@@ -497,7 +515,7 @@ VEC2 InputPosition()
                 // [6-8-16]놓을 수 없다는 메시지를 표시한다
                 printf("놓을 수 없는 곳입니다\a");
 
-                _getch();// [6-8-17키보드 입력을 기다린다
+                getch();// [6-8-17]키보드 입력을 기다린다
             }
 
             break;
@@ -514,7 +532,7 @@ VEC2 InputPosition()
 // [6-9]프로그램 실행의 시작점을 선언한다
 int main()
 {
-    system("chcp 65001 > nul");// [6-9-0]콘솔의 문자 세트를 UTF-8로 설정한다
+    // [6-9-0]리눅스에서는 기본적으로 UTF-8을 사용한다
     srand((unsigned int)time(NULL));// [6-9-1]난수를 섞는다
 
 start:  // [6-9-2]시작 라벨
@@ -539,7 +557,7 @@ start:  // [6-9-2]시작 라벨
 
                 DrawScreen();// [6-9-11]화면을 그리는 함수를 호출한다
 
-                _getch();// [6-9-12]키보드 입력을 기다린다
+                getch();// [6-9-12]키보드 입력을 기다린다
 
                 goto start;// [6-9-13]시작 라벨로 점프한다
             }
@@ -565,7 +583,7 @@ start:  // [6-9-2]시작 라벨
         {
             DrawScreen();// [6-9-20]모눈판을 그리는 함수를 호출한다
 
-            _getch();// [6-9-21]키보드 입력을 기다린다
+            getch();// [6-9-21]키보드 입력을 기다린다
 
             // [6-9-22]놓을 수 있는 좌표를 보유하는 벡터를 선언한다
             std::vector<VEC2> positions;
